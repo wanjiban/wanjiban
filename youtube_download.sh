@@ -8,17 +8,34 @@ fi
 
 # 设置变量
 USERNAME=$1
-YT_DLP="./yt-dlp"
-BASE_DIR="./${USERNAME}"
+YT_DLP_DIR="/yt-dlp_linux"
+CONFIG_FILE="$YT_DLP_DIR/yt-dlp.conf"
+YT_DLP="$YT_DLP_DIR/yt-dlp --config-locations $YT_DLP_DIR"
 
-# 对用户名进行 URL 编码
-ENCODED_USERNAME=$(printf '%s' "$USERNAME" | jq -sRr @uri)
+# 检查配置文件是否存在
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "配置文件 $CONFIG_FILE 不存在。"
+    exit 1
+fi
+
+# 从配置文件中获取下载目录 (-P 参数)
+DOWNLOAD_DIR=$(grep -E '^-P ' "$CONFIG_FILE" | awk '{print $2}' | sed 's/\/$//')
+
+# 如果找不到 -P 参数，使用默认下载目录
+if [ -z "$DOWNLOAD_DIR" ]; then
+    echo "未在配置文件中找到 -P 参数，使用默认下载目录 /volume1/download"
+    DOWNLOAD_DIR="/volume1/download"
+fi
+
+# 替换非法字符
+SANITIZED_USERNAME=$(echo "$USERNAME" | sed 's/\@//g')
+USER_DIR="${DOWNLOAD_DIR}/${SANITIZED_USERNAME}"
 
 # 创建用户目录
-mkdir -p "$BASE_DIR"
+mkdir -p "$USER_DIR"
 
-# 获取用户播放列表
-PLAYLISTS=$(curl -s "https://www.youtube.com/user/${ENCODED_USERNAME}/playlists" | grep -oP '"playlistId":"\K[^"]+')
+# 获取频道播放列表信息
+PLAYLISTS=$($YT_DLP --flat-playlist -J "https://www.youtube.com/${USERNAME}/playlists" | jq -r '.entries[].id' | grep '^PL')
 
 if [ -z "$PLAYLISTS" ]; then
     echo "无法获取播放列表，请检查用户名是否正确或网络连接。"
@@ -28,20 +45,18 @@ fi
 # 处理每个播放列表
 for PLAYLIST_ID in $PLAYLISTS; do
     # 获取播放列表的标题
-    PLAYLIST_TITLE=$(curl -s "https://www.youtube.com/playlist?list=${PLAYLIST_ID}" | grep -oP '<title>\K[^<]+' | sed 's/[^a-zA-Z0-9]/_/g')
+    PLAYLIST_TITLE=$($YT_DLP --flat-playlist -J "https://www.youtube.com/playlist?list=${PLAYLIST_ID}" | jq -r '.title')
 
     if [ -z "$PLAYLIST_TITLE" ]; then
         PLAYLIST_TITLE="Playlist_${PLAYLIST_ID}"
     fi
 
     # 创建播放列表目录
-    PLAYLIST_DIR="${BASE_DIR}/${PLAYLIST_TITLE}"
+    PLAYLIST_DIR="${USER_DIR}/${PLAYLIST_TITLE}"
     mkdir -p "$PLAYLIST_DIR"
 
-    echo "处理播放列表: $PLAYLIST_TITLE"
-
     # 下载播放列表中的所有内容
-    $YT_DLP -f best -o "${PLAYLIST_DIR}/%(title)s.%(ext)s" "https://www.youtube.com/playlist?list=${PLAYLIST_ID}"
+    $YT_DLP -o "${PLAYLIST_DIR}/%(playlist_index)s - %(title)s.%(ext)s" "https://www.youtube.com/playlist?list=${PLAYLIST_ID}"
 
     # 遍历下载的文件，生成和检查 MD5
     for FILE in "${PLAYLIST_DIR}"/*; do
