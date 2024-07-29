@@ -25,7 +25,7 @@ firewall-cmd 快捷执行一些命令
 
 
 
-# check_services.sh
+# github_download.sh
 
 超级 GitHub 下载 ：可一次性下载某个项目生成的全部 release 文件。
 
