@@ -3,7 +3,7 @@ firewall-cmd 快捷执行一些命令
 
 使用方法：
 安装：
-`[wget https://raw.githubusercontent.com/wanjiban/fd/main/fd.sh -O  fd.sh && sudo chmod +x /usr/bin/fd](https://raw.githubusercontent.com/wanjiban/fd/main/fd.sh)`
+`curl -sS https://raw.githubusercontent.com/wanjiban/fd/main/fd.sh | sudo bash`
 
 删除：`rm -rf /bin/fd`
 
