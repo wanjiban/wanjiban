@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 脚本路径
-SCRIPT_PATH="/usr/local/bin/fd"
+SCRIPT_PATH="/usr/bin/fd"
 
 # 确保脚本以 root 权限运行
 if [[ $EUID -ne 0 ]]; then
@@ -140,18 +140,3 @@ handle_selection() {
             ;;
     esac
 }
-
-# 创建脚本文件并写入内容
-echo "#!/bin/bash" > $SCRIPT_PATH
-cat << 'EOF' >> $SCRIPT_PATH
-show_menu
-while true; do
-    handle_selection
-    show_menu
-done
-EOF
-
-# 赋予脚本执行权限
-chmod +x $SCRIPT_PATH
-
-echo "脚本已安装到 $SCRIPT_PATH。"
