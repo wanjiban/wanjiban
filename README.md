@@ -14,7 +14,7 @@
   ```
 
 - **使用**：
-  输入 \`fd\` 即可弹出菜单供选择。
+  输入 `fd` 即可弹出菜单供选择。
 
 ---
 
@@ -24,14 +24,14 @@
 ## 安装方法
 
 - **安装**：
-  \`\`\`bash
+  ```bash
   wget https://raw.githubusercontent.com/wanjiban/fd/main/check_services.sh -O /root/check_services.sh && sudo chmod +x /root/check_services.sh && (sudo crontab -l; echo "*/5 * * * * /root/check_services.sh") | sudo crontab -
-  \`\`\`
+  ```
 
 - **删除**：
-  \`\`\`bash
+  ```bash
   rm -rf /root/check_services.sh && (crontab -l | grep -v '/root/check_services.sh') | sudo crontab -
-  \`\`\`
+  ```
 
 ---
 
@@ -41,16 +41,16 @@
 ## 使用方法
 
 - **安装所需工具**：
-  \`\`\`bash
+  ```bash
   yum install -y wget jq
-  \`\`\`
+  ```
 
 - **下载脚本**：
-  \`\`\`bash
+  ```bash
   wget https://raw.githubusercontent.com/wanjiban/fd/main/github_download.sh -O /root/github_download.sh && sudo chmod +x /root/github_download.sh
-  \`\`\`
+  ```
 
 - **使用**：
-  \`\`\`bash
+  ```bash
   ./github_download.sh wanjiban/wanjiban
-  \`\`\`
+  ```
