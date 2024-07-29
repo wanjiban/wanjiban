@@ -23,7 +23,7 @@ if [ -z "$RELEASES_JSON" ]; then
 fi
 
 # 创建一个目录来存放所有 Releases
-MAIN_DOWNLOAD_DIR="${REPO//\//-}-all-releases"
+MAIN_DOWNLOAD_DIR=$(echo "$REPO" | awk -F'/' '{print $2}')
 mkdir -p "$MAIN_DOWNLOAD_DIR"
 
 # 进入主下载目录
