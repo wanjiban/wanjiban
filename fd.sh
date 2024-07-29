@@ -2,7 +2,7 @@
 
 # 定义变量
 FIREWALL_ZONE="public"
-TRUST_ZONE="trust"
+TRUST_ZONE="trusted"
 ICMP_BLOCK="echo-request" # 默认ping设置
 
 # 函数：显示菜单
@@ -28,8 +28,10 @@ restart_firewalld() {
 
 # 函数：显示全部区域情况
 list_all_zones() {
-    echo "显示全部区域情况..."
-    firewall-cmd --list-all-zones --permanent
+    echo "显示trust区域情况..."
+    firewall-cmd --zone=trusted --list-all
+    echo "显示public区域情况..."
+    firewall-cmd --zone=public --list-all
 }
 
 # 函数：增加端口
