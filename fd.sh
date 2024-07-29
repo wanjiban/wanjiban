@@ -9,8 +9,8 @@ ICMP_BLOCK="echo-request" # 默认ping设置
 show_menu() {
     echo "请选择操作选项:"
     echo "1: 重启firewall-cmd"
-    echo "2: 显示全部区域情况"
-    echo "3: 增加端口"
+    echo "2: 显示关键区域情况"
+    echo "3: 开放端口管理"
     echo "4: 设置ping"
     echo "5: 将接口添加到trust区域"
     echo "6: 防火墙允许或阻止SSH"
