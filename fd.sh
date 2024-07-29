@@ -17,7 +17,7 @@ show_menu() {
     echo "7: 管理阻止的IP或网段"
     echo "8: 保存配置并重启防火墙"
     echo "9: 安装firewalld"
-    echo "0: 退出"
+    echo "q: 退出"
 }
 
 # 函数：重启firewall-cmd
@@ -149,7 +149,7 @@ install_firewalld() {
 # 主循环
 while true; do
     show_menu
-    read -p "请输入选项 (0-9): " option
+    read -p "请输入选项 (1-9,q): " option
 
     case $option in
         1)
@@ -179,7 +179,7 @@ while true; do
         9)
             install_firewalld
             ;;
-        0)
+        q)
             echo "退出..."
             exit 0
             ;;
