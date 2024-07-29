@@ -1,15 +1,12 @@
 #!/bin/bash
 
-# 脚本路径
-SCRIPT_PATH="/usr/bin/fd"
-
 # 确保脚本以 root 权限运行
 if [[ $EUID -ne 0 ]]; then
    echo "此脚本必须以 root 用户身份运行。"
    exit 1
 fi
 
-# 菜单函数
+# 显示菜单
 show_menu() {
     echo "选择操作："
     echo "1) 重启 firewalld"
@@ -40,11 +37,13 @@ handle_selection() {
         3)
             echo "增加端口..."
             read -p "请输入要增加的端口（用空格隔开多个端口）: " ports
+            echo "之前开放的端口:"
             firewall-cmd --zone=public --list-ports
             for port in $ports; do
                 firewall-cmd --zone=public --add-port=$port/tcp --permanent
             done
             firewall-cmd --reload
+            echo "新增的端口:"
             firewall-cmd --zone=public --list-ports
             ;;
         4)
@@ -59,6 +58,7 @@ handle_selection() {
                 exit 1
             fi
             firewall-cmd --reload
+            echo "当前 ping 状态:"
             firewall-cmd --info-zone=public
             ;;
         5)
@@ -74,6 +74,7 @@ handle_selection() {
                 exit 1
             fi
             firewall-cmd --reload
+            echo "当前 trust 区域接口:"
             firewall-cmd --zone=trusted --list-interfaces
             ;;
         6)
@@ -88,6 +89,7 @@ handle_selection() {
                 exit 1
             fi
             firewall-cmd --reload
+            echo "当前允许的服务:"
             firewall-cmd --list-services
             ;;
         7)
@@ -122,6 +124,7 @@ handle_selection() {
             firewall-cmd --runtime-to-permanent
             firewall-cmd --reload
             firewall-cmd --complete-reload
+            echo "当前区域配置:"
             firewall-cmd --list-all-zones
             ;;
         9)
@@ -140,3 +143,18 @@ handle_selection() {
             ;;
     esac
 }
+
+# 创建脚本文件并写入内容
+echo "#!/bin/bash" > /bin/fd
+cat << 'EOF' >> /bin/fd
+show_menu
+while true; do
+    handle_selection
+    show_menu
+done
+EOF
+
+# 赋予脚本执行权限
+chmod +x /bin/fd
+
+echo "脚本已安装到 /bin/fd。"
