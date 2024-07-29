@@ -3,7 +3,7 @@
 # 检查是否提供了仓库路径作为参数
 if [ -z "$1" ]; then
     echo "Usage: $0 +REPO"
-    echo "Example: $0 elseif/MikroTikPatch"
+    echo "Example: $0 wanjiban/wanjiban"
     exit 1
 fi
 
