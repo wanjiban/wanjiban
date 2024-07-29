@@ -1,17 +1,17 @@
 # fd
-\`firewall-cmd\` 快捷执行一些 firewall-cmd 防火墙命令。
+`firewall-cmd` 快捷执行一些 firewall-cmd 防火墙命令。
 
 ## 使用方法
 
 - **安装 & 更新**：
-  \`\`\`bash
+  ```bash
   wget -q https://raw.githubusercontent.com/wanjiban/fd/main/fd.sh -O /bin/fd && chmod +x /bin/fd
-  \`\`\`
+  ```
 
 - **删除**：
-  \`\`\`bash
+  ```bash
   rm -rf /bin/fd
-  \`\`\`
+  ```
 
 - **使用**：
   输入 \`fd\` 即可弹出菜单供选择。
