@@ -1,160 +1,188 @@
 #!/bin/bash
 
-# 确保脚本以 root 权限运行
-if [[ $EUID -ne 0 ]]; then
-   echo "此脚本必须以 root 用户身份运行。"
-   exit 1
-fi
+# 定义变量
+FIREWALL_ZONE="public"
+TRUST_ZONE="trust"
+ICMP_BLOCK="echo-request" # 默认ping设置
 
-# 显示菜单
+# 函数：显示菜单
 show_menu() {
-    echo "选择操作："
-    echo "1) 重启 firewalld"
-    echo "2) 显示全部区域情况"
-    echo "3) 增加端口"
-    echo "4) 允许/禁止 ping"
-    echo "5) 添加/删除接口到 trust 区域"
-    echo "6) 允许/阻止 SSH"
-    echo "7) 列出/管理阻止的 IP 或网段"
-    echo "8) 保存配置并完整重启防火墙"
-    echo "9) 安装 firewalld"
-    echo "0) 退出"
+    echo "请选择操作选项:"
+    echo "1: 重启firewall-cmd"
+    echo "2: 显示全部区域情况"
+    echo "3: 增加端口"
+    echo "4: 设置ping"
+    echo "5: 将接口添加到trust区域"
+    echo "6: 防火墙允许或阻止SSH"
+    echo "7: 管理阻止的IP或网段"
+    echo "8: 保存配置并重启防火墙"
+    echo "9: 安装firewalld"
+    echo "0: 退出"
 }
 
-# 处理用户选择
-handle_selection() {
-    local choice
-    read -p "请输入选项: " choice
-    case $choice in
+# 函数：重启firewall-cmd
+restart_firewalld() {
+    echo "重启firewalld..."
+    systemctl restart firewalld
+}
+
+# 函数：显示全部区域情况
+list_all_zones() {
+    echo "显示全部区域情况..."
+    firewall-cmd --list-all-zones --permanent
+}
+
+# 函数：增加端口
+add_ports() {
+    echo "输入要增加的端口 (多个端口用空格隔开): "
+    read -a ports
+    echo "当前已开放的端口:"
+    firewall-cmd --zone=$FIREWALL_ZONE --list-ports
+    for port in "${ports[@]}"; do
+        firewall-cmd --zone=$FIREWALL_ZONE --add-port=${port}/tcp --permanent
+    done
+    firewall-cmd --reload
+    echo "新增端口:"
+    firewall-cmd --zone=$FIREWALL_ZONE --list-ports
+}
+
+# 函数：设置ping
+set_ping() {
+    echo "输入0关闭ping，1允许ping: "
+    read ping_option
+    if [ "$ping_option" -eq 0 ]; then
+        firewall-cmd --add-icmp-block=$ICMP_BLOCK --permanent
+    elif [ "$ping_option" -eq 1 ]; then
+        firewall-cmd --remove-icmp-block=$ICMP_BLOCK --permanent
+    else
+        echo "无效的选项"
+        return
+    fi
+    firewall-cmd --reload
+    echo "ping开启情况:"
+    firewall-cmd --list-icmp-blocks
+}
+
+# 函数：将接口添加到trust区域
+manage_trust_zone() {
+    echo "输入接口名 (例如: eth0) 和操作 (add 或 remove): "
+    read -p "接口名: " iface
+    read -p "操作 (add 或 remove): " action
+    if [ "$action" == "add" ]; then
+        firewall-cmd --zone=$TRUST_ZONE --add-interface=$iface --permanent
+    elif [ "$action" == "remove" ]; then
+        firewall-cmd --zone=$TRUST_ZONE --remove-interface=$iface --permanent
+    else
+        echo "无效的操作"
+        return
+    fi
+    firewall-cmd --reload
+    echo "trust区域接口情况:"
+    firewall-cmd --zone=$TRUST_ZONE --list-interfaces
+}
+
+# 函数：防火墙允许或阻止SSH
+manage_ssh() {
+    echo "输入0阻止SSH，1允许SSH: "
+    read ssh_option
+    if [ "$ssh_option" -eq 0 ]; then
+        firewall-cmd --permanent --remove-service=ssh
+    elif [ "$ssh_option" -eq 1 ]; then
+        firewall-cmd --permanent --add-service=ssh
+    else
+        echo "无效的选项"
+        return
+    fi
+    firewall-cmd --reload
+    echo "SSH状态:"
+    firewall-cmd --list-services
+}
+
+# 函数：管理阻止的IP或网段
+manage_blocked_ips() {
+    echo "输入1查看阻止的IP或网段，2添加IP或网段，3删除IP或网段: "
+    read manage_option
+    case $manage_option in
         1)
-            echo "重启 firewalld..."
-            systemctl restart firewalld
+            echo "当前阻止的IP或网段:"
+            firewall-cmd --list-rich-rules | grep 'reject'
             ;;
         2)
-            echo "显示全部区域情况..."
-            firewall-cmd --list-all-zones --permanent
+            echo "输入要添加的IP或网段 (例如: 192.168.1.100/32): "
+            read ip_to_add
+            firewall-cmd --add-rich-rule="rule family='ipv4' source address='$ip_to_add' reject" --permanent
+            firewall-cmd --reload
             ;;
         3)
-            echo "增加端口..."
-            read -p "请输入要增加的端口（用空格隔开多个端口）: " ports
-            echo "之前开放的端口:"
-            firewall-cmd --zone=public --list-ports
-            for port in $ports; do
-                firewall-cmd --zone=public --add-port=$port/tcp --permanent
-            done
+            echo "输入要删除的IP或网段 (例如: 192.168.1.100/32): "
+            read ip_to_remove
+            firewall-cmd --remove-rich-rule="rule family='ipv4' source address='$ip_to_remove' reject" --permanent
             firewall-cmd --reload
-            echo "新增的端口:"
-            firewall-cmd --zone=public --list-ports
+            ;;
+        *)
+            echo "无效的选项"
+            ;;
+    esac
+}
+
+# 函数：保存配置并重启防火墙
+save_and_reload() {
+    echo "保存当前配置并重启防火墙..."
+    firewall-cmd --runtime-to-permanent
+    firewall-cmd --reload
+    firewall-cmd --complete-reload
+    echo "当前防火墙配置:"
+    firewall-cmd --list-all-zones
+}
+
+# 函数：安装firewalld
+install_firewalld() {
+    echo "安装firewalld..."
+    yum install -y epel-release firewalld
+    systemctl enable firewalld
+    systemctl restart firewalld
+    firewall-cmd --reload
+}
+
+# 主循环
+while true; do
+    show_menu
+    read -p "请输入选项 (0-9): " option
+
+    case $option in
+        1)
+            restart_firewalld
+            ;;
+        2)
+            list_all_zones
+            ;;
+        3)
+            add_ports
             ;;
         4)
-            echo "设置 ping 状态..."
-            read -p "输入 0 关闭 ping，输入 1 允许 ping: " ping_status
-            if [[ $ping_status -eq 0 ]]; then
-                firewall-cmd --zone=public --remove-icmp-block=echo-request --permanent
-            elif [[ $ping_status -eq 1 ]]; then
-                firewall-cmd --zone=public --add-icmp-block=echo-request --permanent
-            else
-                echo "无效的输入。"
-                exit 1
-            fi
-            firewall-cmd --reload
-            echo "当前 ping 状态:"
-            firewall-cmd --info-zone=public
+            set_ping
             ;;
         5)
-            echo "添加/删除接口到 trust 区域..."
-            read -p "输入接口名（例如 eth0）: " iface
-            read -p "输入 1 添加接口到 trust 区域，输入 0 从 trust 区域移除接口: " action
-            if [[ $action -eq 1 ]]; then
-                firewall-cmd --zone=trusted --add-interface=$iface --permanent
-            elif [[ $action -eq 0 ]]; then
-                firewall-cmd --zone=trusted --remove-interface=$iface --permanent
-            else
-                echo "无效的输入。"
-                exit 1
-            fi
-            firewall-cmd --reload
-            echo "当前 trust 区域接口:"
-            firewall-cmd --zone=trusted --list-interfaces
+            manage_trust_zone
             ;;
         6)
-            echo "允许/阻止 SSH..."
-            read -p "输入 1 允许 SSH，输入 0 阻止 SSH: " ssh_status
-            if [[ $ssh_status -eq 1 ]]; then
-                firewall-cmd --permanent --add-service=ssh
-            elif [[ $ssh_status -eq 0 ]]; then
-                firewall-cmd --permanent --remove-service=ssh
-            else
-                echo "无效的输入。"
-                exit 1
-            fi
-            firewall-cmd --reload
-            echo "当前允许的服务:"
-            firewall-cmd --list-services
+            manage_ssh
             ;;
         7)
-            echo "管理阻止的 IP 或网段..."
-            echo "1) 列出阻止的 IP 或网段"
-            echo "2) 添加阻止 IP 或网段"
-            echo "3) 删除阻止 IP 或网段"
-            read -p "请输入选项: " manage_choice
-            case $manage_choice in
-                1)
-                    echo "列出阻止的 IP 或网段..."
-                    firewall-cmd --get-rich-rules
-                    ;;
-                2)
-                    read -p "输入要阻止的 IP 或网段: " block_ip
-                    firewall-cmd --add-rich-rule="rule family='ipv4' source address='$block_ip' drop" --permanent
-                    firewall-cmd --reload
-                    ;;
-                3)
-                    read -p "输入要删除的阻止 IP 或网段: " unblock_ip
-                    firewall-cmd --remove-rich-rule="rule family='ipv4' source address='$unblock_ip' drop" --permanent
-                    firewall-cmd --reload
-                    ;;
-                *)
-                    echo "无效的输入。"
-                    exit 1
-                    ;;
-            esac
+            manage_blocked_ips
             ;;
         8)
-            echo "保存配置并完整重启防火墙..."
-            firewall-cmd --runtime-to-permanent
-            firewall-cmd --reload
-            firewall-cmd --complete-reload
-            echo "当前区域配置:"
-            firewall-cmd --list-all-zones
+            save_and_reload
             ;;
         9)
-            echo "安装 firewalld..."
-            yum install -y epel-release firewalld
-            systemctl enable firewalld
-            systemctl restart firewalld
-            firewall-cmd --reload
+            install_firewalld
             ;;
         0)
             echo "退出..."
             exit 0
             ;;
         *)
-            echo "无效的选项。"
+            echo "无效的选项"
             ;;
     esac
-}
-
-# 创建脚本文件并写入内容
-echo "#!/bin/bash" > /bin/fd
-cat << 'EOF' >> /bin/fd
-show_menu
-while true; do
-    handle_selection
-    show_menu
 done
-EOF
-
-# 赋予脚本执行权限
-chmod +x /bin/fd
-
-echo "脚本已安装到 /bin/fd。"
