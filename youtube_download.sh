@@ -8,7 +8,7 @@ fi
 
 # 设置变量
 USERNAME=$1
-YT_DLP_DIR="/yt-dlp_linux"
+YT_DLP_DIR="./yt-dlp_linux"
 CONFIG_FILE="$YT_DLP_DIR/yt-dlp.conf"
 YT_DLP="$YT_DLP_DIR/yt-dlp --config-locations $YT_DLP_DIR"
 
@@ -23,8 +23,8 @@ DOWNLOAD_DIR=$(grep -E '^-P ' "$CONFIG_FILE" | awk '{print $2}' | sed 's/\/$//')
 
 # 如果找不到 -P 参数，使用默认下载目录
 if [ -z "$DOWNLOAD_DIR" ]; then
-    echo "未在配置文件中找到 -P 参数，使用默认下载目录 /volume1/download"
-    DOWNLOAD_DIR="/volume1/download"
+    echo "未在配置文件中找到 -P 参数，使用默认下载目录。"
+    DOWNLOAD_DIR=$YT_DLP_DIR
 fi
 
 # 替换非法字符
