@@ -60,7 +60,7 @@ for PLAYLIST_ID in $PLAYLISTS; do
 
     # 遍历下载的文件，生成和检查 MD5
     for FILE in "${PLAYLIST_DIR}"/*; do
-        if [ -f "$FILE" ]; then
+        if [[ -f "$FILE" && "${FILE}" != *.md5 ]]; then
             MD5_FILE="${FILE}.md5"
 
             # 计算当前文件的 MD5
