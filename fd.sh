@@ -5,28 +5,13 @@ FIREWALL_ZONE="public"
 TRUST_ZONE="trusted"
 ICMP_BLOCK="echo-request" # 默认ping设置
 
-# 函数：显示菜单
-show_menu() {
-    echo "请选择操作选项:"
-    echo "1: 重启firewall-cmd"
-    echo "2: 显示关键区域情况"
-    echo "3: 开放端口管理"
-    echo "4: 设置ping"
-    echo "5: 将接口添加到trust区域"
-    echo "6: 防火墙允许或阻止SSH"
-    echo "7: 管理阻止的IP或网段"
-    echo "8: 保存配置并重启防火墙"
-    echo "9: 安装firewalld"
-    echo "q: 退出"
-}
-
 # 函数：重启firewall-cmd
 restart_firewalld() {
     echo "重启firewalld..."
     systemctl restart firewalld
 }
 
-# 函数：显示全部区域情况
+# 函数：显示关键区域情况
 list_all_zones() {
     echo "显示trust区域情况..."
     firewall-cmd --zone=trusted --list-all
@@ -146,45 +131,87 @@ install_firewalld() {
     firewall-cmd --reload
 }
 
-# 主循环
-while true; do
-    show_menu
-    read -p "请输入选项 (1-9,q): " option
-
-    case $option in
-        1)
+# 函数：根据参数执行操作
+execute_command() {
+    case $1 in
+        restart)
             restart_firewalld
             ;;
-        2)
+        list)
             list_all_zones
             ;;
-        3)
+        add_ports)
             add_ports
             ;;
-        4)
+        set_ping)
             set_ping
             ;;
-        5)
+        manage_trust)
             manage_trust_zone
             ;;
-        6)
+        manage_ssh)
             manage_ssh
             ;;
-        7)
+        manage_blocked_ips)
             manage_blocked_ips
             ;;
-        8)
+        save_and_reload)
             save_and_reload
             ;;
-        9)
+        install)
             install_firewalld
             ;;
-        q)
-            echo "退出..."
-            exit 0
-            ;;
         *)
-            echo "无效的选项"
+            echo "无效的命令"
+            echo "有效命令: restart, list, add_ports, set_ping, manage_trust, manage_ssh, manage_blocked_ips, save_and_reload, install"
             ;;
     esac
-done
+}
+
+# 主程序逻辑
+if [ $# -eq 0 ]; then
+    echo "没有提供命令行参数，进入交互模式..."
+    while true; do
+        show_menu
+        read -p "请输入选项 (1-9,q): " option
+
+        case $option in
+            1)
+                restart_firewalld
+                ;;
+            2)
+                list_all_zones
+                ;;
+            3)
+                add_ports
+                ;;
+            4)
+                set_ping
+                ;;
+            5)
+                manage_trust_zone
+                ;;
+            6)
+                manage_ssh
+                ;;
+            7)
+                manage_blocked_ips
+                ;;
+            8)
+                save_and_reload
+                ;;
+            9)
+                install_firewalld
+                ;;
+            q)
+                echo "退出..."
+                exit 0
+                ;;
+            *)
+                echo "无效的选项"
+                ;;
+        esac
+    done
+else
+    execute_command "$1"
+fi
