@@ -1,0 +1,52 @@
+# test on 20240807 v7.15 
+# 获取当前接口IP和API在线IP，对比后更新。
+
+:local CFtkn "your"
+:local CFzoneid "your"
+:local CFid "your"
+:local CFdomain "your"
+:local WANInterface "your"
+:local CFrecordType "A"
+:local CFrecordTTL 1
+:local CFcloud false
+
+#------------------------------------------------------------------------------------
+# 获取当前 IP
+:global LocalIP
+:if ([/interface get $WANInterface value-name=running]) do={
+    :local LocalIPa [/ip address get [find interface="$WANInterface" disabled=no] address]
+    # 从接口 IP 地址中取消网掩码
+    :for i from=( [:len $LocalIPa] - 1) to=0 do={
+        :if ( [:pick $LocalIPa $i] = "/") do={ 
+            :set LocalIP [:pick $LocalIPa 0 $i]
+       } 
+   }
+} else={
+    :log info "Cloudflare: $WANInterface 当前未运行，因此不会更新。"
+    :error [:log info "再见"]
+}
+
+:global OnlineIP
+#### 使用 Cloudflare API 下载 DNS 记录的 JSON 文件。 ####
+:local getApiUrl "https://api.cloudflare.com/client/v4/zones/$CFzoneid/dns_records/$CFid"
+:local authHeader "content-type:application/json,Authorization:Bearer $CFtkn"
+/tool fetch mode=https http-method=get url="$getApiUrl" http-header-field="$authHeader" output=file
+#### 从 JSON DNS 记录文件中提取 IP。
+:local fileContent [/file get "$CFid" contents]
+:set OnlineIP ([:deserialize from=json value=$fileContent]->"result"->"content")
+:log info "之前的 IP 是 $OnlineIP"
+
+:if ($LocalIP != $OnlineIP) do={
+    :log info "Cloudflare $CFdomain: 当前 IP $LocalIP 不等于之前的 IP，需要更新"
+    :log info "Cloudflare $CFdomain: 正在发送更新"
+    # 组装端点
+    # 文档: https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
+    :local apiUrl "https://api.cloudflare.com/client/v4/zones/$CFzoneid/dns_records/$CFid"
+    # 组装头信息
+    :local headers "content-type:application/json,Authorization:Bearer $CFtkn"
+    :local payload "{\"type\":\"$CFrecordType\",\"name\":\"$CFdomain\",\"content\":\"$LocalIP\",\"ttl\":$CFrecordTTL,\"proxied\":$CFcloud}"
+    /tool fetch mode=https http-method=put url="$apiUrl" http-header-field="$headers" http-data="$payload" dst-path="" output=none
+    :log info "Cloudflare $CFdomain: 已用 IP $LocalIP 更新 Cloudflare"
+} else={
+    :log info "Cloudflare $CFdomain: 之前的 IP $OnlineIP 与当前 IP 相同，无需更新"
+}
