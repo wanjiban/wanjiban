@@ -5,6 +5,21 @@ FIREWALL_ZONE="public"
 TRUST_ZONE="trusted"
 ICMP_BLOCK="echo-request" # 默认ping设置
 
+# 函数：显示菜单
+show_menu() {
+    echo "请选择操作选项:"
+    echo "1: 显示关键区域情况"
+    echo "2: 重启firewall-cmd"
+    echo "3: 增加或删除端口"
+    echo "4: 设置ping"
+    echo "5: 将接口添加到trust区域"
+    echo "6: 防火墙允许或阻止SSH"
+    echo "7: 管理阻止的IP或网段"
+    echo "8: 保存配置并重启防火墙"
+    echo "9: 安装firewalld"
+    echo "q: 退出"
+}
+
 # 函数：重启firewall-cmd
 restart_firewalld() {
     echo "重启firewalld..."
@@ -30,6 +45,20 @@ add_ports() {
     done
     firewall-cmd --reload
     echo "新增端口:"
+    firewall-cmd --zone=$FIREWALL_ZONE --list-ports
+}
+
+# 函数：删除端口
+remove_ports() {
+    echo "输入要删除的端口 (多个端口用空格隔开): "
+    read -a ports
+    echo "当前已开放的端口:"
+    firewall-cmd --zone=$FIREWALL_ZONE --list-ports
+    for port in "${ports[@]}"; do
+        firewall-cmd --zone=$FIREWALL_ZONE --remove-port=${port}/tcp --permanent
+    done
+    firewall-cmd --reload
+    echo "删除后的端口:"
     firewall-cmd --zone=$FIREWALL_ZONE --list-ports
 }
 
@@ -143,6 +172,9 @@ execute_command() {
         add_ports)
             add_ports
             ;;
+        remove_ports)
+            remove_ports
+            ;;
         set_ping)
             set_ping
             ;;
@@ -163,7 +195,7 @@ execute_command() {
             ;;
         *)
             echo "无效的命令"
-            echo "有效命令: restart, list, add_ports, set_ping, manage_trust, manage_ssh, manage_blocked_ips, save_and_reload, install"
+            echo "有效命令: restart, list, add_ports, remove_ports, set_ping, manage_trust, manage_ssh, manage_blocked_ips, save_and_reload, install"
             ;;
     esac
 }
@@ -173,17 +205,30 @@ if [ $# -eq 0 ]; then
     echo "没有提供命令行参数，进入交互模式..."
     while true; do
         show_menu
-        read -p "请输入选项 (1-9,q): " option
+        read -p "请输入选项 (1-9): " option
+
+        if [ -z "$option" ]; then
+            echo "退出..."
+            exit 0
+        fi
 
         case $option in
             1)
-                restart_firewalld
-                ;;
-            2)
                 list_all_zones
                 ;;
+            2)
+                restart_firewalld
+                ;;
             3)
-                add_ports
+                echo "输入操作 (add 或 remove): "
+                read operation
+                if [ "$operation" == "add" ]; then
+                    add_ports
+                elif [ "$operation" == "remove" ]; then
+                    remove_ports
+                else
+                    echo "无效的操作"
+                fi
                 ;;
             4)
                 set_ping
@@ -202,10 +247,6 @@ if [ $# -eq 0 ]; then
                 ;;
             9)
                 install_firewalld
-                ;;
-            q)
-                echo "退出..."
-                exit 0
                 ;;
             *)
                 echo "无效的选项"
