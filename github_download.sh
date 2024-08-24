@@ -18,7 +18,7 @@ RELEASES_JSON=$(curl -s $RELEASES_URL)
 
 # 检查是否成功获取到 JSON 数据
 if [ -z "$RELEASES_JSON" ]; then
-    echo "无法获取 Releases 信息，请检查仓库路径和网络连接。"
+    echo "Failed to retrieve releases information. Please check the repository path and network connection."
     exit 1
 fi
 
@@ -39,7 +39,7 @@ echo "$RELEASES_JSON" | jq -c '.[]' | while read -r release; do
 
     # 检查是否有下载链接
     if [ -z "$DOWNLOAD_URLS" ]; then
-        echo "Release $RELEASE_NAME 没有找到下载链接。"
+        echo "No download links found for release $RELEASE_NAME."
         continue
     fi
 
@@ -79,23 +79,27 @@ echo "$RELEASES_JSON" | jq -c '.[]' | while read -r release; do
         # 下载文件并计算 MD5 校验和
         if [ -z "$SAVED_MD5" ] || [ "$CURRENT_MD5" != "$SAVED_MD5" ]; then
             ((COUNT++))
-            echo "正在下载 $RELEASE_NAME 中的文件 $COUNT: $FILE_NAME"
-            wget --progress=bar -q "$URL"
+            echo "Downloading file $COUNT: $FILE_NAME from release $RELEASE_NAME"
+            wget -q --output-document=/dev/null "$URL"
             # 计算下载文件的 MD5 校验和
             NEW_MD5=$(md5sum "$FILE_NAME" | awk '{print $1}')
             # 更新 MD5 文件
             grep -v "$FILE_NAME" "$MD5_FILE" > "$MD5_FILE.tmp" && mv "$MD5_FILE.tmp" "$MD5_FILE"
             echo "$NEW_MD5  $FILE_NAME" >> "$MD5_FILE"
         else
-            echo "$FILE_NAME 已经存在且 MD5 校验和匹配，跳过下载。"
+            echo "$FILE_NAME already exists and matches the MD5 checksum. Skipping download."
         fi
     done
 
     # 返回主下载目录
     cd ..
 
-    echo "$RELEASE_NAME 的所有文件已下载到目录 $RELEASE_DIR"
+    echo "All files from release $RELEASE_NAME have been downloaded to directory $RELEASE_DIR"
 done
 
+# 计算并显示下载的所有文件大小总计
+TOTAL_SIZE=$(du -sh . | awk '{print $1}')
+echo "Total size of downloaded files: $TOTAL_SIZE"
+
 # 提示完成
-echo "所有文件已下载到目录 $MAIN_DOWNLOAD_DIR"
+echo "All files have been downloaded to directory $MAIN_DOWNLOAD_DIR"
