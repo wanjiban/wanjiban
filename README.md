@@ -36,7 +36,7 @@
 ---
 
 # github_download.sh
-超级 GitHub 下载脚本：可一次性下载某个项目生成的全部 Release 文件。同时可以增加第三个参数null，模拟下载功能。
+超级 GitHub 下载脚本：可一次性下载某个项目生成的全部 Release 文件。同时可以增加第三个参数null和del，下载到null和下载后删除，区别就是前者不写硬盘，后者写，结果都一样。
 
 ## 使用方法
 
@@ -53,5 +53,6 @@
 - **使用**：
   ```bash
   ./github_download.sh wanjiban/wanjiban
+  ./github_download.sh wanjiban/wanjiban del
   ./github_download.sh wanjiban/wanjiban null
   ```
