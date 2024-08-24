@@ -2,8 +2,9 @@
 
 # 检查是否提供了仓库路径作为参数
 if [ -z "$1" ]; then
-    echo "Usage: $0 REPO [null]"
+    echo "Usage: $0 REPO [del/null]"
     echo "Example: $0 wanjiban/wanjiban"
+    echo "Example: $0 wanjiban/wanjiban del"
     echo "Example: $0 wanjiban/wanjiban null"
     exit 1
 fi
@@ -11,10 +12,13 @@ fi
 # 设置 GitHub 仓库路径
 REPO=$1
 
-# 检查是否启用 null 模式
-DRY_RUN=false
-if [ "$2" == "null" ]; then
-    DRY_RUN=true
+# 检查是否启用 del 或 null 模式
+DEL_MODE=false
+NULL_MODE=false
+if [ "$2" == "del" ]; then
+    DEL_MODE=true
+elif [ "$2" == "null" ]; then
+    NULL_MODE=true
 fi
 
 # 获取所有 Releases 页面中所有 Releases 的信息
@@ -29,8 +33,8 @@ if [ -z "$RELEASES_JSON" ]; then
     exit 1
 fi
 
-# 创建一个目录来存放所有 Releases（如果未启用 null 模式）
-if [ "$DRY_RUN" = false ]; then
+# 创建一个目录来存放所有 Releases（如果未启用 del 或 null 模式）
+if [ "$DEL_MODE" = false ] && [ "$NULL_MODE" = false ]; then
     MAIN_DOWNLOAD_DIR=$(echo "$REPO" | awk -F'/' '{print $2}')
     mkdir -p "$MAIN_DOWNLOAD_DIR"
     cd "$MAIN_DOWNLOAD_DIR" || exit
@@ -46,7 +50,7 @@ echo "$RELEASES_JSON" | jq -c '.[]' | while read -r release; do
         continue
     fi
 
-    if [ "$DRY_RUN" = false ]; then
+    if [ "$DEL_MODE" = false ] && [ "$NULL_MODE" = false ]; then
         RELEASE_DIR="$RELEASE_NAME"
         mkdir -p "$RELEASE_DIR"
         cd "$RELEASE_DIR" || exit
@@ -57,7 +61,7 @@ echo "$RELEASES_JSON" | jq -c '.[]' | while read -r release; do
 
     echo "$DOWNLOAD_URLS" | while read -r URL; do
         FILE_NAME=$(basename "$URL")
-        if [ "$DRY_RUN" = false ]; then
+        if [ "$DEL_MODE" = false ] && [ "$NULL_MODE" = false ]; then
             if [ -f "$MD5_FILE" ]; then
                 SAVED_MD5=$(grep "$FILE_NAME" "$MD5_FILE" | awk '{print $1}')
             else
@@ -72,30 +76,37 @@ echo "$RELEASES_JSON" | jq -c '.[]' | while read -r release; do
 
             if [ -z "$SAVED_MD5" ] || [ "$CURRENT_MD5" != "$SAVED_MD5" ]; then
                 ((COUNT++))
-                echo "正在下载 $RELEASE_NAME 中的文件 $COUNT: $FILE_NAME"
+                echo "Downloading file $COUNT from $RELEASE_NAME: $FILE_NAME"
                 wget --progress=bar -q "$URL"
                 NEW_MD5=$(md5sum "$FILE_NAME" | awk '{print $1}')
                 grep -v "$FILE_NAME" "$MD5_FILE" > "$MD5_FILE.tmp" && mv "$MD5_FILE.tmp" "$MD5_FILE"
                 echo "$NEW_MD5  $FILE_NAME" >> "$MD5_FILE"
             else
-                echo "$FILE_NAME 已经存在且 MD5 校验和匹配，跳过下载。"
+                echo "$FILE_NAME already exists and matches the MD5 checksum. Skipping download."
             fi
-        else
+        elif [ "$DEL_MODE" = true ]; then
             ((COUNT++))
-            echo "模拟下载 $RELEASE_NAME 中的文件 $COUNT: $FILE_NAME"
+            echo "Downloading and deleting file $COUNT from $RELEASE_NAME: $FILE_NAME"
+            wget --progress=bar -q "$URL"
+            rm -f "$FILE_NAME"
+        elif [ "$NULL_MODE" = true ]; then
+            ((COUNT++))
+            echo "Downloading file $COUNT from $RELEASE_NAME to /dev/null: $FILE_NAME"
             wget --progress=bar -q "$URL" -O /dev/null
         fi
     done
 
-    if [ "$DRY_RUN" = false ]; then
+    if [ "$DEL_MODE" = false ] && [ "$NULL_MODE" = false ]; then
         cd ..
-        echo "$RELEASE_NAME 的所有文件已下载到目录 $RELEASE_DIR"
+        echo "All files from release $RELEASE_NAME have been downloaded to directory $RELEASE_DIR"
     fi
 done
 
 # 提示完成
-if [ "$DRY_RUN" = false ]; then
-    echo "所有文件已下载到目录 $MAIN_DOWNLOAD_DIR"
+if [ "$DEL_MODE" = false ] && [ "$NULL_MODE" = false ]; then
+    echo "All files have been downloaded to directory $MAIN_DOWNLOAD_DIR"
+elif [ "$DEL_MODE" = true ]; then
+    echo "In del mode, all downloaded files were deleted after download."
 else
-    echo "null 模式下，所有文件均未保存。"
+    echo "In null mode, all files were downloaded directly to /dev/null."
 fi
