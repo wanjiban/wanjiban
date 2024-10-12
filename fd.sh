@@ -222,9 +222,9 @@ if [ $# -eq 0 ]; then
             3)
                 echo "输入操作 (a)dd 或 (r)emove: "
                 read operation
-                if [ "$operation" == "a"]; then
+                if [ "$operation" == "a" ]; then
                     add_ports
-                elif [ "$operation" == "r"]; then
+                elif [ "$operation" == "r" ]; then
                     remove_ports
                 else
                     echo "无效的操作"
