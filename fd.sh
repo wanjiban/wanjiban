@@ -220,11 +220,11 @@ if [ $# -eq 0 ]; then
                 restart_firewalld
                 ;;
             3)
-                echo "输入操作 (add 或 remove): "
+                echo "输入操作 (a)dd 或 (r)emove: "
                 read operation
-                if [ "$operation" == "add" ]; then
+                if [[ "$operation" == "a" || "$operation" == "add" ]]; then
                     add_ports
-                elif [ "$operation" == "remove" ]; then
+                elif [[ "$operation" == "r" || "$operation" == "remove"]]; then
                     remove_ports
                 else
                     echo "无效的操作"
