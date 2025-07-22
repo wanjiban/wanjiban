@@ -1,5 +1,5 @@
 # test on 20240807 v7.15 
-# 获取当前接口IP和API在线IP，对比后更新。
+# 获取当前接口IP和API在线IP，对比后更新。增加了对 Cloudflare 的支持。
 
 :local CFtkn "your"
 :local CFzoneid "your"
