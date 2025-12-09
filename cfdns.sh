@@ -11,7 +11,7 @@ CF_API_URL="https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_records"
 
 # 检查是否安装了 curl 和 jq
 if ! command -v curl &> /dev/null; then
-    echo "curl 命令未找到。请安装 curl。"
+    echo "curl 命令未找到。请安装 curl 。"
     exit 1
 fi
 
